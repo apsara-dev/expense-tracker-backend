@@ -678,8 +678,16 @@ def github_deploy_webhook(request):
 
     # 3. python manage.py migrate
     try:
+        py_candidates = [
+            base_dir / 'myenv' / 'bin' / 'python',
+            Path.home() / 'myenv' / 'bin' / 'python',
+            base_dir / 'venv' / 'Scripts' / 'python.exe',
+            base_dir / 'venv' / 'bin' / 'python',
+        ]
+        py_bin = next((str(p) for p in py_candidates if p.exists()), 'python')
+
         migrate_proc = subprocess.run(
-            [sys.executable, str(base_dir / 'manage.py'), 'migrate'],
+            [py_bin, str(base_dir / 'manage.py'), 'migrate'],
             cwd=base_dir,
             capture_output=True,
             text=True,
