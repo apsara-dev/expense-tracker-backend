@@ -7,10 +7,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -------------------------
 # SECURITY
 # -------------------------
-SECRET_KEY = 'django-insecure-change-this-key'
+SECRET_KEY = 'django-insecure-expense-tracker-secret-key-32bytes-min-length-token'
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # -------------------------
@@ -142,3 +142,42 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# -------------------------
+# EMAIL CONFIGURATION (CONSOLE IN DEV / AUTO-SMTP WHEN CONFIGURED)
+# -------------------------
+import os
+
+# Auto-load .env file from project root if it exists
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    try:
+        with open(env_path, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+    except Exception as _e:
+        print(f"[Warning] Could not load .env file: {_e}")
+
+email_user = os.getenv('EMAIL_HOST_USER', '').strip()
+email_pwd = os.getenv('EMAIL_HOST_PASSWORD', '').strip().replace(' ', '')
+
+# Auto-switch: If credentials exist in .env, use real SMTP; otherwise use console backend
+default_backend = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if (email_user and email_pwd)
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+
+EMAIL_BACKEND = os.getenv('DJANGO_EMAIL_BACKEND', default_backend)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = email_user
+EMAIL_HOST_PASSWORD = email_pwd
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    f'FinTrack <{email_user}>' if email_user else 'FinTrack <noreply@fintrack.app>'
+)
