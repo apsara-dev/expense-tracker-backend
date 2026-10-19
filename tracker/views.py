@@ -118,83 +118,92 @@ def register_user(request):
 # -------------------------
 @api_view(['POST'])
 def login_user(request):
-    login_id = request.data.get("username", "").strip()
-    password = request.data.get("password", "")
-
-    if not login_id or not password:
-        return Response(
-            {"error": "Username/Email and password are required."},
-            status=400
-        )
-
-    # Check if user entered email or username
-    user_obj = None
-    if "@" in login_id:
-        user_obj = User.objects.filter(email__iexact=login_id).first()
-    if not user_obj:
-        user_obj = User.objects.filter(username__iexact=login_id).first()
-
-    if not user_obj:
-        return Response(
-            {"error": "Account does not exist. Please check your username/email or register."},
-            status=400
-        )
-
-    # Authenticate credentials
-    user = authenticate(username=user_obj.username, password=password)
-    if user is None:
-        return Response(
-            {"error": "Invalid password. Please check your credentials."},
-            status=400
-        )
-
-    # Generate Login 2FA OTP
-    otp_obj = LoginOTP.generate_otp_for_user(user)
-
-    target_email = user.email or login_id
-    subject = f"FinTrack: Your Login Verification Code is {otp_obj.otp}"
-    message = (
-        f"Hello {user.username},\n\n"
-        f"Your 6-digit FinTrack Login Verification Code is: {otp_obj.otp}\n\n"
-        f"This code will expire in 10 minutes.\n"
-        f"Please enter this code on the login screen to access your account.\n\n"
-        f"If you did not attempt to log in, please secure your account immediately.\n\n"
-        f"FinTrack Security Team"
-    )
-
     try:
-        html_content = render_otp_email_html(
-            username=user.username,
-            otp_code=otp_obj.otp,
-            title="Login Verification Code",
-            purpose="log into your FinTrack account",
-            validity_minutes=10,
+        raw_login = request.data.get("username", "") or request.data.get("email", "")
+        login_id = str(raw_login or "").strip()
+        password = str(request.data.get("password", "") or "")
+
+        if not login_id or not password:
+            return Response(
+                {"error": "Username/Email and password are required."},
+                status=400
+            )
+
+        # Check if user entered email or username
+        user_obj = None
+        if "@" in login_id:
+            user_obj = User.objects.filter(email__iexact=login_id).first()
+        if not user_obj:
+            user_obj = User.objects.filter(username__iexact=login_id).first()
+
+        if not user_obj:
+            return Response(
+                {"error": "Account does not exist. Please check your username/email or register."},
+                status=400
+            )
+
+        # Authenticate credentials
+        user = authenticate(username=user_obj.username, password=password)
+        if user is None:
+            return Response(
+                {"error": "Invalid password. Please check your credentials."},
+                status=400
+            )
+
+        # Generate Login 2FA OTP
+        otp_obj = LoginOTP.generate_otp_for_user(user)
+
+        target_email = user.email or (login_id if "@" in login_id else "")
+        subject = f"FinTrack: Your Login Verification Code is {otp_obj.otp}"
+        message = (
+            f"Hello {user.username},\n\n"
+            f"Your 6-digit FinTrack Login Verification Code is: {otp_obj.otp}\n\n"
+            f"This code will expire in 10 minutes.\n"
+            f"Please enter this code on the login screen to access your account.\n\n"
+            f"If you did not attempt to log in, please secure your account immediately.\n\n"
+            f"FinTrack Security Team"
         )
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[target_email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-    except Exception as e:
-        print(f"[Email Error] Login OTP failed: {e}")
 
-    # Obfuscate email
-    parts = target_email.split("@")
-    masked_email = f"{parts[0][:2]}***@{parts[1]}" if len(parts) == 2 else target_email
+        if target_email:
+            try:
+                html_content = render_otp_email_html(
+                    username=user.username,
+                    otp_code=otp_obj.otp,
+                    title="Login Verification Code",
+                    purpose="log into your FinTrack account",
+                    validity_minutes=10,
+                )
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[target_email],
+                    html_message=html_content,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"[Email Error] Login OTP failed: {e}")
 
-    resp = {
-        "otp_required": True,
-        "message": f"Verification code sent to {masked_email}",
-        "username": user.username,
-        "email": target_email,
-    }
-    if settings.DEBUG:
-        resp["dev_otp"] = otp_obj.otp
+        # Obfuscate email
+        if target_email and "@" in target_email:
+            parts = target_email.split("@")
+            masked_email = f"{parts[0][:2]}***@{parts[1]}" if len(parts) == 2 else target_email
+        else:
+            masked_email = user.username
 
-    return Response(resp)
+        resp = {
+            "otp_required": True,
+            "message": f"Verification code sent to {masked_email}",
+            "username": user.username,
+            "email": target_email or user.username,
+        }
+        if settings.DEBUG:
+            resp["dev_otp"] = otp_obj.otp
+
+        return Response(resp)
+    except Exception as exc:
+        print(f"[Critical Login Error] {exc}")
+        return Response({"error": f"Login service error: {str(exc)}"}, status=500)
 
 
 # -------------------------
