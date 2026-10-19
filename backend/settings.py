@@ -161,8 +161,8 @@ if env_path.exists():
     except Exception as _e:
         print(f"[Warning] Could not load .env file: {_e}")
 
-email_user = os.getenv('EMAIL_HOST_USER', '').strip()
-email_pwd = os.getenv('EMAIL_HOST_PASSWORD', '').strip().replace(' ', '')
+email_user = os.getenv('EMAIL_HOST_USER', 'apsaraappdevelopment@gmail.com').strip()
+email_pwd = os.getenv('EMAIL_HOST_PASSWORD', 'hdrnydnfkqxtxddw').strip().replace(' ', '')
 
 # Auto-switch: If credentials exist in .env, use real SMTP; otherwise use console backend
 default_backend = (
