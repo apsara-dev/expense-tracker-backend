@@ -197,8 +197,6 @@ def login_user(request):
             "username": user.username,
             "email": target_email or user.username,
         }
-        if settings.DEBUG:
-            resp["dev_otp"] = otp_obj.otp
 
         return Response(resp)
     except Exception as exc:
@@ -301,8 +299,6 @@ def resend_login_otp(request):
         "username": user.username,
         "email": target_email,
     }
-    if settings.DEBUG:
-        resp["dev_otp"] = otp_obj.otp
 
     return Response(resp)
 
@@ -382,8 +378,6 @@ def request_password_reset_otp(request):
         "email": target_email,
         "username": user.username,
     }
-    if settings.DEBUG:
-        resp["dev_otp"] = otp_obj.otp
 
     return Response(resp)
 
