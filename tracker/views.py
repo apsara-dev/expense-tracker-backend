@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .models import Transaction, PasswordResetOTP, LoginOTP
 from .serializers import TransactionSerializer
+from .email_templates import render_otp_email_html, render_welcome_email_html
 
 
 # -------------------------
@@ -99,6 +100,7 @@ def register_user(request):
             message=welcome_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
+            html_message=render_welcome_email_html(user.username, user.email),
             fail_silently=False,
         )
     except Exception as e:
@@ -161,11 +163,19 @@ def login_user(request):
     )
 
     try:
+        html_content = render_otp_email_html(
+            username=user.username,
+            otp_code=otp_obj.otp,
+            title="Login Verification Code",
+            purpose="log into your FinTrack account",
+            validity_minutes=10,
+        )
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[target_email],
+            html_message=html_content,
             fail_silently=False,
         )
     except Exception as e:
@@ -259,11 +269,19 @@ def resend_login_otp(request):
     )
 
     try:
+        html_content = render_otp_email_html(
+            username=user.username,
+            otp_code=otp_obj.otp,
+            title="New Login Verification Code",
+            purpose="log into your FinTrack account",
+            validity_minutes=10,
+        )
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[target_email],
+            html_message=html_content,
             fail_silently=False,
         )
     except Exception as e:
@@ -328,11 +346,19 @@ def request_password_reset_otp(request):
     )
 
     try:
+        html_content = render_otp_email_html(
+            username=user.username,
+            otp_code=otp_obj.otp,
+            title="Password Reset Verification",
+            purpose="reset your FinTrack account password",
+            validity_minutes=10,
+        )
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[target_email],
+            html_message=html_content,
             fail_silently=False,
         )
     except Exception as e:
