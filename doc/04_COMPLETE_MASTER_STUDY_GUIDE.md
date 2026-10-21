@@ -120,18 +120,18 @@ graph TD
     Router --> State
     State --> Axios
     State --> Export
-    Vercel -.->|Serves Static Bundle| UI
+    Vercel -.->|"Serves Static Bundle"| UI
 
-    Axios -->|HTTPS REST API (JSON)| PyAny
+    Axios -->|"HTTPS REST API (JSON)"| PyAny
     PyAny --> Cors
     Cors --> AuthFilter
     AuthFilter --> Urls
     Urls --> Views
     Views --> DB
     Views --> EmailEngine
-    EmailEngine -->|SMTP TLS 587| Gmail
-    GitHub -->|Push Event Trigger| Webhook
-    Webhook -->|git pull & wsgi reload| PyAny
+    EmailEngine -->|"SMTP TLS 587"| Gmail
+    GitHub -->|"Push Event Trigger"| Webhook
+    Webhook -->|"git pull & wsgi reload"| PyAny
 ```
 
 ---
